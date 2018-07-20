@@ -1,0 +1,12 @@
+[package]
+name = "sqlfmt"
+version = "0.1.0"
+authors = ["Thorsten Muerell <thorsten@muerell.de>"]
+
+[build-dependencies] # <-- We added this and everything after!
+lalrpop = "0.15.2"
+
+[dependencies]
+lalrpop-util = "0.15.2"
+regex = "0.2.1"
+colored = "1.6"
