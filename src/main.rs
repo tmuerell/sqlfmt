@@ -1,15 +1,30 @@
+extern crate clap;
 extern crate colored;
+use clap::{App, Arg};
 
 pub mod ast;
+pub mod pretty_printer;
 pub mod sql;
 
-use ast::SelectStruct;
+use colored::*;
+use pretty_printer::PrettyPrinter;
 use std::fs::File;
 use std::io::Read;
-use colored::*;
 
 fn main() {
-    let filename = "test.sql";
+    let matches = App::new("SQL formatter")
+        .version("1.0")
+        .author("Thorsten M. <thorsten@muerell.de>")
+        .about("Formats a SQL statement from a file or stdin")
+        .arg(
+            Arg::with_name("FILE")
+                .help("Input file to use")
+                .required(true)
+                .index(1),
+        )
+        .get_matches();
+
+    let filename = matches.value_of("FILE").unwrap();
     let mut f = File::open(filename).expect("file not found");
 
     let mut contents = String::new();
@@ -19,33 +34,28 @@ fn main() {
     let res = sql::SelectStmtParser::new().parse(&contents);
 
     match res {
-        Ok(res) => match res {
-            SelectStruct {
-                columns: cols,
-                tables: tabs,
-            } => {
-                println!(" SELECT {}", cols.first().unwrap());
-                for col in &cols[1..] {
-                    println!("      , {}", col);
-                }
-                println!("   FROM {}", tabs)
-            }
-        },
-        Err(e) => println!("{}: {:?}", "ERROR".red(), e)
+        Ok(res) => println!("{}", res.pretty_print(0).unwrap()),
+        Err(e) => println!("{}: {:?}", "ERROR".red(), e),
     }
 }
 
 #[test]
 fn testit() {
-    let expr = sql::SelectStmtParser::new().parse("SELECT column FROM dual ;");
+    let expr = sql::SelectStmtParser::new().parse("SELECT column FROM dual;");
     assert_eq!(
         &format!("{:?}", expr),
-        "Ok(SelectStruct { columns: [\"column\"], tables: \"dual\" })"
+        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: None }], tables: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"dual\", qualifier: None }, alias: None } })"
     );
 
     let expr = sql::SelectStmtParser::new().parse("SELECT column, column2 FROM dual ;");
     assert_eq!(
         &format!("{:?}", expr),
-        "Ok(SelectStruct { columns: [\"column\", \"column2\"], tables: \"dual\" })"
+        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: None }, QualifiedIdentifierT { name: \"column2\", qualifier: None }], tables: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"dual\", qualifier: None }, alias: None } })"
+    );
+
+    let expr = sql::SelectStmtParser::new().parse("SELECT t.column, t.column2 FROM table t ;");
+    assert_eq!(
+        &format!("{:?}", expr),
+        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: Some(\"t\") }, QualifiedIdentifierT { name: \"column2\", qualifier: Some(\"t\") }], tables: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"table\", qualifier: None }, alias: Some(\"t\") } })"
     );
 }

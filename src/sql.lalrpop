@@ -1,27 +1,54 @@
-use ast::SelectStruct; // (0)
+use ast::*;
 
 grammar;
 
 match {
     r"(?i)select" => "SELECT",
     r"(?i)from" => "FROM",
+    r"(?i)join" => "JOIN",
+    r"(?i)on" => "ON",
+    r"(?i)as" => "AS",
+    r"(?i)where" => "WHERE",
+    r"(?i)and" => "AND",
+    r"(?i)or" => "OR",
+    "*" => STAR,
     ";",
-    ","
+    ",",
+    ".",
+    "="
 } else {
     r"[a-zA-Z0-9_]+" => ID,
 }
 
-pub SelectStmt : SelectStruct = { "SELECT" <c:Comma<Identifier>> "FROM" <t:Identifier> ";" => SelectStruct { columns : c, tables : t }};
-
-Comma<T>: Vec<T> = { // (1)
-    <v:(<T> ",")*> <e:T?> => match e { // (2)
-        None => v,
-        Some(e) => {
-            let mut v = v;
-            v.push(e);
-            v
-        }
-    }
+pub SelectStmt : SelectStruct = {
+    "SELECT"
+    <c:Comma<QualifiedIdentifier>>
+    "FROM"
+    <t:AliasedIdentifier>
+    <j:JoinSpecification*>
+    <e:WhereSpecification?>
+    ";" => SelectStruct { columns : c, table : t, joins: j, filter: e }
 };
 
-Identifier : String = ID => <>.to_string();
+WhereSpecification : TwoSidedExpressionT = "WHERE" <Expression>;
+
+JoinSpecification : JoinSpecificationT = "JOIN" <t:AliasedIdentifier> "ON" <e:Expression> => JoinSpecificationT { table :t, on: e, typ: JoinType::INNER };
+
+Expression : ExpressionT = {
+    <v1:QualifiedIdentifier> "=" <v2:QualifiedIdentifier> => Sub(TwoSidedExpressionT { v1: v1, v2: v2, operator: Operator::EQ }),
+    <v1:Expression> "AND" <v2:Expression> => ExpressionT::Combining(CombiningExpressionT { v1: v1, v2 : v2, operator: LogicalOperator::AND })
+}
+
+Comma<E>: Vec<E> =
+    <v0:(<E> ",")*> <e1:E?> =>
+        v0.into_iter().chain(e1).collect();
+
+AliasedIdentifier : AliasedIdentifierT = <n:QualifiedIdentifier> <a:AliasSpec?> => AliasedIdentifierT { name: n, alias: a };
+
+AliasSpec : String = "AS"? <Identifier>;
+
+QualifiedIdentifier : QualifiedIdentifierT = <s:SchemaQualifier?> <n:Identifier> => QualifiedIdentifierT { name: n, qualifier: s };
+
+SchemaQualifier : String = <ID> "." => <>.to_string();
+
+Identifier : String = { ID => <>.to_string() , STAR => <>.to_string() } ;
