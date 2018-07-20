@@ -44,18 +44,18 @@ fn testit() {
     let expr = sql::SelectStmtParser::new().parse("SELECT column FROM dual;");
     assert_eq!(
         &format!("{:?}", expr),
-        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: None }], tables: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"dual\", qualifier: None }, alias: None } })"
+        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: None }], table: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"dual\", qualifier: None }, alias: None }, joins: [], filter: None })"
     );
 
     let expr = sql::SelectStmtParser::new().parse("SELECT column, column2 FROM dual ;");
     assert_eq!(
         &format!("{:?}", expr),
-        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: None }, QualifiedIdentifierT { name: \"column2\", qualifier: None }], tables: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"dual\", qualifier: None }, alias: None } })"
+        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: None }, QualifiedIdentifierT { name: \"column2\", qualifier: None }], table: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"dual\", qualifier: None }, alias: None }, joins: [], filter: None })"
     );
 
     let expr = sql::SelectStmtParser::new().parse("SELECT t.column, t.column2 FROM table t ;");
     assert_eq!(
         &format!("{:?}", expr),
-        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: Some(\"t\") }, QualifiedIdentifierT { name: \"column2\", qualifier: Some(\"t\") }], tables: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"table\", qualifier: None }, alias: Some(\"t\") } })"
+        "Ok(SelectStruct { columns: [QualifiedIdentifierT { name: \"column\", qualifier: Some(\"t\") }, QualifiedIdentifierT { name: \"column2\", qualifier: Some(\"t\") }], table: AliasedIdentifierT { name: QualifiedIdentifierT { name: \"table\", qualifier: None }, alias: Some(\"t\") }, joins: [], filter: None })"
     );
 }

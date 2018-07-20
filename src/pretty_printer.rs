@@ -1,6 +1,7 @@
 use ast::*;
 use std::fmt::Write;
 use std::io::Result;
+use std::fmt::Error;
 
 pub trait PrettyPrinter {
     fn pretty_print(&self, indent_level: i8) -> Result<String>;
@@ -18,9 +19,22 @@ impl PrettyPrinter for SelectStruct {
             write!(buf, "   {}\n", join.pretty_print(indent_level)?);
         }
         if let Some(ref e) = self.filter {
-            write!(buf, "  WHERE {}", e.pretty_print(indent_level)?);
+            write!(buf, "  WHERE {}\n", e.first().unwrap().pretty_print(indent_level)?);
+            for f in &e[1..] {
+                write!(buf, "    AND {}\n", f.pretty_print(indent_level)?);
+            }
         }
         Ok(buf)
+    }
+}
+
+impl PrettyPrinter for ExpressionTermT {
+    fn pretty_print(&self, indent_level: i8) -> Result<String> {
+        Ok(match self {
+            ExpressionTermT::Number(n) => format!("{}", n),
+            ExpressionTermT::StringLiteral(s) => format!("{}", s),
+            ExpressionTermT::Identifier(i) => format!("{}", i.pretty_print(indent_level)?)
+        })
     }
 }
 

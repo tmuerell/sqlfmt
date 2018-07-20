@@ -3,7 +3,7 @@ pub struct SelectStruct {
     pub columns : Vec<QualifiedIdentifierT>,
     pub table : AliasedIdentifierT,
     pub joins : Vec<JoinSpecificationT>,
-    pub filter : Option<TwoSidedExpressionT>
+    pub filter : Option<Vec<TwoSidedExpressionT>>
 }
 
 #[derive(Debug)]
@@ -26,24 +26,17 @@ pub struct JoinSpecificationT {
 }
 
 #[derive(Debug)]
-pub enum ExpressionT {
-    Single(QualifiedIdentifierT),
-    Sub(TwoSidedExpressionT),
-    Combining(CombiningExpressionT)
+pub enum ExpressionTermT {
+    Identifier(QualifiedIdentifierT),
+    Number(i64),
+    StringLiteral(String)
 }
 
 #[derive(Debug)]
 pub struct TwoSidedExpressionT {
-    pub v1 : QualifiedIdentifierT,
-    pub v2 : QualifiedIdentifierT,
+    pub v1 : ExpressionTermT,
+    pub v2 : ExpressionTermT,
     pub operator : Operator
-}
-
-#[derive(Debug)]
-pub struct CombiningExpressionT {
-    pub v1 : Box<ExpressionT>,
-    pub v2 : Box<ExpressionT>,
-    pub operator : LogicalOperator
 }
 
 #[derive(Debug)]

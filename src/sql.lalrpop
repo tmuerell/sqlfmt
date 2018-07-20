@@ -1,4 +1,5 @@
 use ast::*;
+use std::str::FromStr;
 
 grammar;
 
@@ -12,12 +13,12 @@ match {
     r"(?i)and" => "AND",
     r"(?i)or" => "OR",
     "*" => STAR,
-    ";",
-    ",",
-    ".",
-    "="
+    r"[0-9]+" => NUM
 } else {
     r"[a-zA-Z0-9_]+" => ID,
+    r"'[^']+'" => STRING
+} else {
+    _
 }
 
 pub SelectStmt : SelectStruct = {
@@ -30,14 +31,21 @@ pub SelectStmt : SelectStruct = {
     ";" => SelectStruct { columns : c, table : t, joins: j, filter: e }
 };
 
-WhereSpecification : TwoSidedExpressionT = "WHERE" <Expression>;
+WhereSpecification : Vec<TwoSidedExpressionT> = "WHERE" <AndChain<EqualsExpression>>;
 
-JoinSpecification : JoinSpecificationT = "JOIN" <t:AliasedIdentifier> "ON" <e:Expression> => JoinSpecificationT { table :t, on: e, typ: JoinType::INNER };
+AndChain<E>: Vec<E> =
+    <v0:(<E> "AND")*> <e1:E?> =>
+        v0.into_iter().chain(e1).collect();
 
-Expression : ExpressionT = {
-    <v1:QualifiedIdentifier> "=" <v2:QualifiedIdentifier> => Sub(TwoSidedExpressionT { v1: v1, v2: v2, operator: Operator::EQ }),
-    <v1:Expression> "AND" <v2:Expression> => ExpressionT::Combining(CombiningExpressionT { v1: v1, v2 : v2, operator: LogicalOperator::AND })
-}
+JoinSpecification : JoinSpecificationT = "JOIN" <t:AliasedIdentifier> "ON" <e:EqualsExpression> => JoinSpecificationT { table :t, on: e, typ: JoinType::INNER };
+
+EqualsExpression : TwoSidedExpressionT = <v1:ExpressionTerm> "=" <v2:ExpressionTerm> => TwoSidedExpressionT { v1: v1, v2: v2, operator: Operator::EQ };
+
+ExpressionTerm : ExpressionTermT = {
+    <s:NUM> => ExpressionTermT::Number(i64::from_str(s).unwrap()),
+    <v:QualifiedIdentifier> => ExpressionTermT::Identifier(v),
+    <s:STRING> => ExpressionTermT::StringLiteral(s.to_owned())
+};
 
 Comma<E>: Vec<E> =
     <v0:(<E> ",")*> <e1:E?> =>
