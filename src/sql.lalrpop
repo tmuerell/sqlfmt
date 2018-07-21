@@ -10,8 +10,11 @@ match {
     r"(?i)on" => "ON",
     r"(?i)as" => "AS",
     r"(?i)where" => "WHERE",
-    r"(?i)and" => "AND",
-    r"(?i)or" => "OR",
+    r"(?i)and|or" => "AND",
+    r"(?i)like" => "LIKE",
+    r"(?i)is" => "IS",
+    r"(?i)not" => "NOT",
+    r"(?i)null" => "NULL",
     "*" => STAR,
     r"[0-9]+" => NUM
 } else {
@@ -31,15 +34,25 @@ pub SelectStmt : SelectStruct = {
     ";" => SelectStruct { columns : c, table : t, joins: j, filter: e }
 };
 
-WhereSpecification : Vec<TwoSidedExpressionT> = "WHERE" <AndChain<EqualsExpression>>;
+WhereSpecification : Vec<LogicalExpressionT> = "WHERE" <AndChain<LogicalExpression>>;
 
 AndChain<E>: Vec<E> =
     <v0:(<E> "AND")*> <e1:E?> =>
         v0.into_iter().chain(e1).collect();
 
-JoinSpecification : JoinSpecificationT = "JOIN" <t:AliasedIdentifier> "ON" <e:EqualsExpression> => JoinSpecificationT { table :t, on: e, typ: JoinType::INNER };
+JoinSpecification : JoinSpecificationT = "JOIN" <t:AliasedIdentifier> "ON" <e:LogicalExpression> => JoinSpecificationT { table :t, on: e, typ: JoinType::Inner };
 
-EqualsExpression : TwoSidedExpressionT = <v1:ExpressionTerm> "=" <v2:ExpressionTerm> => TwoSidedExpressionT { v1: v1, v2: v2, operator: Operator::EQ };
+LogicalExpression : LogicalExpressionT = 
+    {
+        <v1:ExpressionTerm> <o:BinaryOperator> <v2:ExpressionTerm> => LogicalExpressionT::Binary(TwoSidedExpressionT { v1: v1, v2: v2, operator: o }),
+        <v1:ExpressionTerm> "IS" "NOT" "NULL" => LogicalExpressionT::Unary(UnaryExpressionT { v1: v1, operator: UnaryOperator::NotNull }),
+        <v1:ExpressionTerm> "IS" "NULL" => LogicalExpressionT::Unary(UnaryExpressionT { v1: v1, operator: UnaryOperator::IsNull }),
+    };
+
+BinaryOperator : ComparisionOperator = {
+    "=" => ComparisionOperator::Eq,
+    "LIKE" => ComparisionOperator::Like
+}
 
 ExpressionTerm : ExpressionTermT = {
     <s:NUM> => ExpressionTermT::Number(i64::from_str(s).unwrap()),
