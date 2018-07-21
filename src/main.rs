@@ -9,6 +9,8 @@ pub mod sql;
 use colored::*;
 use pretty_printer::PrettyPrinter;
 use std::fs::File;
+use std::io;
+use std::io::{BufReader, BufRead};
 use std::io::Read;
 
 fn main() {
@@ -25,10 +27,17 @@ fn main() {
         .get_matches();
 
     let filename = matches.value_of("FILE").unwrap();
-    let mut f = File::open(filename).expect("file not found");
+
+    let mut reader: Box<BufRead> = if "-" == filename {
+        Box::new(BufReader::new(io::stdin()))
+    } else {
+        Box::new(BufReader::new(
+            File::open(filename).expect("Error opening file"),
+        ))
+    };
 
     let mut contents = String::new();
-    f.read_to_string(&mut contents)
+    reader.read_to_string(&mut contents)
         .expect("something went wrong reading the file");
 
     let res = sql::SelectStmtParser::new().parse(&contents);

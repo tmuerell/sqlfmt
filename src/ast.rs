@@ -3,7 +3,7 @@ pub struct SelectStruct {
     pub columns : Vec<QualifiedIdentifierT>,
     pub table : AliasedIdentifierT,
     pub joins : Vec<JoinSpecificationT>,
-    pub filter : Option<Vec<TwoSidedExpressionT>>
+    pub filter : Option<Vec<LogicalExpressionT>>
 }
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub struct AliasedIdentifierT {
 #[derive(Debug)]
 pub struct JoinSpecificationT {
     pub table : AliasedIdentifierT,
-    pub on : TwoSidedExpressionT,
+    pub on : LogicalExpressionT,
     pub typ : JoinType
 }
 
@@ -33,25 +33,45 @@ pub enum ExpressionTermT {
 }
 
 #[derive(Debug)]
+pub enum LogicalExpressionT {
+    Binary(TwoSidedExpressionT),
+    Unary(UnaryExpressionT)
+}
+
+#[derive(Debug)]
+pub struct UnaryExpressionT {
+    pub v1 : ExpressionTermT,
+    pub operator : UnaryOperator
+}
+
+#[derive(Debug)]
 pub struct TwoSidedExpressionT {
     pub v1 : ExpressionTermT,
     pub v2 : ExpressionTermT,
-    pub operator : Operator
+    pub operator : ComparisionOperator
 }
 
 #[derive(Debug)]
 pub enum JoinType {
-    INNER,
-    LEFT_OUTER,
-    RIGHT_OUTER,
-    FULL_OUTER,
-    CROSS,
-    NONE
+    Inner,
+    LeftOuter,
+    RightOuter,
+    FullOuter,
+    Cross,
+    None
 }
 
 #[derive(Debug)]
-pub enum Operator {
-    EQ
+pub enum ComparisionOperator {
+    Eq,
+    Like
+}
+
+#[derive(Debug)]
+pub enum UnaryOperator {
+    Not,
+    NotNull,
+    IsNull
 }
 
 #[derive(Debug)]
